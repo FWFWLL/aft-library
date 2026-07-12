@@ -16,6 +16,7 @@ pub enum CurrentField {
     Author,
     Genre,
     Publication,
+    Search,
 }
 
 // Application state
@@ -24,6 +25,7 @@ pub struct App {
     pub current_field: Option<CurrentField>,
     pub library: Vec<Book>,
     pub current_book: Option<Book>,
+    pub current_search_text: Option<String>,
 }
 
 impl App {
@@ -33,6 +35,7 @@ impl App {
             current_field: None,
             library: Vec::new(),
             current_book: None,
+            current_search_text: None,
         }
     }
 

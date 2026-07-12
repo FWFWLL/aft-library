@@ -1,6 +1,6 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, List, ListItem, Padding, Paragraph};
 
@@ -12,28 +12,19 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
         .split(frame.area());
 
-    // let title_block = Block::default()
-    //     .borders(Borders::ALL)
-    //     .style(Style::default());
-
-    // let title = Paragraph::new(Text::styled("Library", Style::default())).block(title_block);
-
-    // frame.render_widget(title, chunks[0]);
-
-    let library_chunks = Layout::default()
+    // Left chunk
+    let left_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Fill(1),
-            Constraint::Length(3),
-        ])
+        .constraints([Constraint::Fill(1), Constraint::Length(3)])
         .split(chunks[0]);
 
-    let list_block = Block::default()
+    // Left chunk -> Library
+    let library_block = Block::default()
         .borders(Borders::ALL)
         .padding(Padding::left(1))
         .style(Style::default());
 
-    let list_items = app
+    let list_books = app
         .library
         .iter()
         .map(|book| {
@@ -44,9 +35,10 @@ pub fn ui(frame: &mut Frame, app: &App) {
         })
         .collect::<Vec<ListItem>>();
 
-    let list = List::new(list_items).block(list_block);
-    frame.render_widget(list, library_chunks[0]);
+    let library = List::new(list_books).block(library_block);
+    frame.render_widget(library, left_chunks[0]);
 
+    // Left chunk -> Navigation
     let nav_block = Block::default()
         .borders(Borders::ALL)
         .padding(Padding::horizontal(1))
@@ -64,5 +56,44 @@ pub fn ui(frame: &mut Frame, app: &App) {
     ];
 
     let nav = Paragraph::new(Line::from(nav_text)).block(nav_block);
-    frame.render_widget(nav, library_chunks[1]);
+    frame.render_widget(nav, left_chunks[1]);
+
+    // Right chunk
+    let right_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Fill(1)])
+        .split(chunks[1]);
+
+    // Right chunk -> Search
+    let search_block = Block::default()
+        .borders(Borders::ALL)
+        .padding(Padding::horizontal(1))
+        .style(Style::default());
+
+    let search_text;
+    if let Some(current_search_text) = &app.current_search_text {
+        search_text = Paragraph::new(current_search_text.clone());
+    } else {
+        search_text = Paragraph::new(Span::styled("...", Style::default().fg(Color::DarkGray)));
+    }
+
+    let search_bar = search_text.block(search_block);
+    frame.render_widget(search_bar, right_chunks[0]);
+
+    // Right column -> Details
+    let details_block = Block::default()
+        .borders(Borders::ALL)
+        .padding(Padding::horizontal(1))
+        .style(Style::default());
+
+    let mut details_text = Vec::new();
+    if let Some(book) = &app.current_book {
+        details_text.push(Line::from(book.title.clone()));
+        book.author.iter().for_each(|author| details_text.push(Line::from(author.clone())));
+        details_text.push(Line::from(book.genre.clone()));
+        details_text.push(Line::from(book.publication.to_string()));
+    }
+
+    let details = Paragraph::new(Text::from(details_text)).block(details_block);
+    frame.render_widget(details, right_chunks[1]);
 }
