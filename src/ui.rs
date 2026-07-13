@@ -1,10 +1,10 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListState, Padding, Paragraph};
+use ratatui::widgets::{Block, List, ListState, Padding, Paragraph, Wrap};
 
-use crate::app::App;
+use crate::app::{App, CurrentField, CurrentScreen};
 use crate::book::{Book, Status};
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
@@ -16,15 +16,25 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         Constraint::Fill(1),
         Constraint::Length(3),
     ]));
-    let [search_area, details_area] = right_area.layout(&Layout::vertical([
-        Constraint::Length(3),
-        Constraint::Fill(1),
-    ]));
 
     render_library(frame, lib_area, &app.library, &mut app.library_state);
     render_nav(frame, nav_area);
-    render_search_bar(frame, search_area);
-    render_book_details(frame, details_area, &app.library, &app.library_state);
+
+    match app.current_screen {
+        CurrentScreen::Library => {
+            let [search_area, details_area] = right_area.layout(&Layout::vertical([
+                Constraint::Length(3),
+                Constraint::Fill(1),
+            ]));
+
+            render_search_bar(frame, search_area);
+            render_book_details(frame, details_area, &app.library, &app.library_state);
+        },
+        CurrentScreen::Registration => {
+            render_registration_form(frame, right_area, app);
+        },
+        _ => {},
+    }
 }
 
 fn render_library(
@@ -40,7 +50,6 @@ fn render_library(
 
     let library = List::new(book_titles)
         .highlight_style(Modifier::REVERSED)
-        .highlight_symbol("> ")
         .block(Block::bordered());
 
     frame.render_stateful_widget(library, area, library_state);
@@ -86,7 +95,10 @@ fn render_book_details(
     let mut book_details = Vec::default();
     if let Some(library_index) = library_state.selected() {
         if let Some(book) = library.get(library_index) {
-            book_details.push(Line::from(Span::styled(book.title.as_str(), Style::default().bold())));
+            book_details.push(Line::from(Span::styled(
+                book.title.as_str(),
+                Style::default().bold(),
+            )));
             book_details.push(Line::from(format!("Author: {}", book.author.join(", "))));
             book_details.push(Line::from(format!("Genre: {}", book.genre.join(", "))));
             book_details.push(Line::from(format!("Published in {}", book.publication)));
@@ -113,4 +125,66 @@ fn render_book_details(
 
     let details = Paragraph::new(book_details).block(Block::bordered());
     frame.render_widget(details, area);
+}
+
+fn render_registration_form(frame: &mut Frame, area: Rect, app: &mut App) {
+    let registration_block = Block::bordered().title("Register new book");
+
+    let [
+        title_area,
+        author_area,
+        genre_area,
+        publication_area,
+        _,
+        instruction_area,
+    ] = area.layout(
+        &Layout::vertical([
+            Constraint::Min(3),
+            Constraint::Min(3),
+            Constraint::Min(3),
+            Constraint::Min(3),
+            Constraint::Percentage(100),
+            Constraint::Length(3),
+        ])
+        .margin(1),
+    );
+
+    let mut title_block = Block::bordered().title("Title");
+    let mut author_block = Block::bordered().title("Author");
+    let mut genre_block = Block::bordered().title("Genre");
+    let mut publicatoin_block = Block::bordered().title("Year of Publication");
+
+    match app.current_field {
+        Some(CurrentField::Title) => title_block = title_block.blue(),
+        Some(CurrentField::Author) => author_block = author_block.blue(),
+        Some(CurrentField::Genre) => genre_block = genre_block.blue(),
+        Some(CurrentField::Publication) => publicatoin_block = publicatoin_block.blue(),
+        _ => {},
+    }
+
+    let title_input = Paragraph::new(app.registration_form.title.value()).block(title_block);
+    let author_input = Paragraph::new(app.registration_form.author.value()).block(author_block);
+    let genre_input = Paragraph::new(app.registration_form.genre.value()).block(genre_block);
+    let publication_input =
+        Paragraph::new(app.registration_form.publication.value()).block(publicatoin_block);
+
+    frame.render_widget(registration_block, area);
+    frame.render_widget(title_input, title_area);
+    frame.render_widget(author_input, author_area);
+    frame.render_widget(genre_input, genre_area);
+    frame.render_widget(publication_input, publication_area);
+
+    let [cancel_area, _, register_area] = instruction_area.layout(&Layout::horizontal([
+        Constraint::Length(8),
+        Constraint::Fill(1),
+        Constraint::Length(10),
+    ]));
+
+    let cancel = Paragraph::new(Line::from("Cancel"))
+        .block(Block::bordered().title(Span::raw("Esc").bold()));
+    let register = Paragraph::new(Line::from("Register").right_aligned())
+        .block(Block::bordered().title(Span::raw("Enter").bold()));
+
+    frame.render_widget(cancel, cancel_area);
+    frame.render_widget(register, register_area);
 }
