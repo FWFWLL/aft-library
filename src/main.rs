@@ -33,10 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     terminal.show_cursor()?;
 
-    if result.is_ok() {
-        println!("Library state saved succesfully.")
-    } else {
-        eprintln!("Failed to save library.");
+    match result {
+        Ok(_) => println!("Library state saved succesfully."),
+        Err(_) => eprintln!("Failed to save library."),
     }
 
     result
