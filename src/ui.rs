@@ -1,23 +1,25 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, Borders, List, ListItem, Padding, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Padding, Paragraph};
 
 use crate::app::App;
 
 pub fn ui(frame: &mut Frame, app: &App) {
     // Frame chunks
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-        .split(frame.area());
+    let [left, right] =
+        Layout::horizontal([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .split(frame.area())[..]
+    else {
+        unreachable!();
+    };
 
     // Left chunks
     let left_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Fill(1), Constraint::Length(3)])
-        .split(chunks[0]);
+        .split(left);
 
     // Left chunk -> Library
     let library_block = Block::default()
@@ -30,14 +32,10 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .iter()
         .enumerate()
         .map(|(i, book)| {
-            let mut style = Style::default();
-            if let Some(lib_i) = app.library_index {
-                if i == lib_i {
-                    style = style.fg(Color::Black).bg(Color::White);
-                }
-            }
-
-            ListItem::new(Line::from(Span::styled(String::from(&book.title), style)))
+            ListItem::new(Line::from(Span::styled(
+                String::from(&book.title),
+                Style::default(),
+            )))
         })
         .collect::<Vec<ListItem>>();
 
@@ -68,7 +66,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let right_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Fill(1)])
-        .split(chunks[1]);
+        .split(right);
 
     // Right chunk -> Search
     let search_block = Block::default()
@@ -93,17 +91,11 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .style(Style::default());
 
     let mut details_text = Vec::new();
-    if let Some(lib_i) = &app.library_index {
-        if let Some(book) = app.library.get(*lib_i) {
-            details_text.push(Line::from(book.title.clone()));
-            book.author
-                .iter()
-                .for_each(|author| details_text.push(Line::from(author.clone())));
-            details_text.push(Line::from(book.genre.clone()));
-            details_text.push(Line::from(book.publication.to_string()));
-        }
-    }
 
     let details = Paragraph::new(Text::from(details_text)).block(details_block);
     frame.render_widget(details, right_chunks[1]);
 }
+
+fn render_library(frame: &mut Frame, area: Rect, list_state: &ListState) {}
+
+fn render_nav(frame: &mut Frame, area: Rect) {}
