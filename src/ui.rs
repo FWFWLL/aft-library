@@ -7,12 +7,13 @@ use ratatui::widgets::{Block, Borders, List, ListItem, Padding, Paragraph};
 use crate::app::App;
 
 pub fn ui(frame: &mut Frame, app: &App) {
+    // Frame chunks
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
         .split(frame.area());
 
-    // Left chunk
+    // Left chunks
     let left_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Fill(1), Constraint::Length(3)])
@@ -27,11 +28,16 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let list_books = app
         .library
         .iter()
-        .map(|book| {
-            ListItem::new(Line::from(Span::styled(
-                String::from(&book.title),
-                Style::default(),
-            )))
+        .enumerate()
+        .map(|(i, book)| {
+            let mut style = Style::default();
+            if let Some(lib_i) = app.library_index {
+                if i == lib_i {
+                    style = style.fg(Color::Black).bg(Color::White);
+                }
+            }
+
+            ListItem::new(Line::from(Span::styled(String::from(&book.title), style)))
         })
         .collect::<Vec<ListItem>>();
 
@@ -58,7 +64,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let nav = Paragraph::new(Line::from(nav_text)).block(nav_block);
     frame.render_widget(nav, left_chunks[1]);
 
-    // Right chunk
+    // Right chunks
     let right_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Fill(1)])
@@ -74,7 +80,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
     if let Some(current_search_text) = &app.current_search_text {
         search_text = Paragraph::new(current_search_text.clone());
     } else {
-        search_text = Paragraph::new(Span::styled("...", Style::default().fg(Color::DarkGray)));
+        search_text = Paragraph::new(Span::styled("Search", Style::default().fg(Color::DarkGray)));
     }
 
     let search_bar = search_text.block(search_block);
@@ -87,11 +93,15 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .style(Style::default());
 
     let mut details_text = Vec::new();
-    if let Some(book) = &app.current_book {
-        details_text.push(Line::from(book.title.clone()));
-        book.author.iter().for_each(|author| details_text.push(Line::from(author.clone())));
-        details_text.push(Line::from(book.genre.clone()));
-        details_text.push(Line::from(book.publication.to_string()));
+    if let Some(lib_i) = &app.library_index {
+        if let Some(book) = app.library.get(*lib_i) {
+            details_text.push(Line::from(book.title.clone()));
+            book.author
+                .iter()
+                .for_each(|author| details_text.push(Line::from(author.clone())));
+            details_text.push(Line::from(book.genre.clone()));
+            details_text.push(Line::from(book.publication.to_string()));
+        }
     }
 
     let details = Paragraph::new(Text::from(details_text)).block(details_block);

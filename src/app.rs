@@ -24,7 +24,7 @@ pub struct App {
     pub current_screen: CurrentScreen,
     pub current_field: Option<CurrentField>,
     pub library: Vec<Book>,
-    pub current_book: Option<Book>,
+    pub library_index: Option<usize>,
     pub current_search_text: Option<String>,
 }
 
@@ -34,7 +34,7 @@ impl App {
             current_screen: CurrentScreen::Library,
             current_field: None,
             library: Vec::new(),
-            current_book: None,
+            library_index: None,
             current_search_text: None,
         }
     }
@@ -102,6 +102,10 @@ impl App {
                 .publication(2018)
                 .build()?,
         );
+
+        if !self.library.is_empty() {
+            self.library_index = Some(0);
+        }
 
         Ok(())
     }
