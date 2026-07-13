@@ -13,19 +13,18 @@ impl Default for Status {
     }
 }
 
-// Every field is required (Might change later)
 #[derive(Debug, PartialEq, Eq)]
 pub struct Book {
     pub title: String,
     pub author: Vec<String>,
-    pub genre: String,    // Genres are arbitrary and thus difficult to enumerate
-    pub publication: u32, // Year of publication
+    pub genre: Vec<String>, // Books can have multiple genres
+    pub publication: u32,   // Year of publication
     pub status: Status,
 }
 
 impl Book {
     // Discouraged to use this constructor directly, use the builder instead
-    fn new(title: String, author: Vec<String>, genre: String, publication: u32) -> Self {
+    fn new(title: String, author: Vec<String>, genre: Vec<String>, publication: u32) -> Self {
         Book {
             title,
             author,
@@ -56,7 +55,7 @@ impl Book {
 pub struct BookBuilder {
     title: Option<String>,
     author: Option<Vec<String>>,
-    genre: Option<String>,
+    genre: Option<Vec<String>>,
     publication: Option<u32>,
 }
 
@@ -76,11 +75,17 @@ impl BookBuilder {
         } else {
             self.author.as_mut().unwrap().push(String::from(author));
         }
+
         self
     }
 
     pub fn genre(mut self, genre: &str) -> Self {
-        self.genre = Some(String::from(genre));
+        if self.genre.is_none() {
+            self.genre = Some(vec![String::from(genre)]);
+        } else {
+            self.genre.as_mut().unwrap().push(String::from(genre));
+        }
+
         self
     }
 
@@ -123,7 +128,7 @@ mod test_book {
         let book = Book::new(
             String::from("The Rust Programming Language"),
             vec![String::from("Steve Klabnik"), String::from("Carol Nichols")],
-            String::from("Programming"),
+            vec![String::from("Programming")],
             2018,
         );
 
@@ -132,7 +137,7 @@ mod test_book {
             book.author,
             vec![String::from("Steve Klabnik"), String::from("Carol Nichols")]
         );
-        assert_eq!(book.genre, "Programming");
+        assert_eq!(book.genre, vec!["Programming"]);
         assert_eq!(book.publication, 2018);
         assert_eq!(book.status, Status::Available);
     }
@@ -142,7 +147,7 @@ mod test_book {
         let mut book = Book::new(
             String::from("The Rust Programming Language"),
             vec![String::from("Steve Klabnik"), String::from("Carol Nichols")],
-            String::from("Programming"),
+            vec![String::from("Programming")],
             2018,
         );
 
@@ -178,7 +183,7 @@ mod test_book_builder {
             book.author,
             vec![String::from("Steve Klabnik"), String::from("Carol Nichols")]
         );
-        assert_eq!(book.genre, "Programming");
+        assert_eq!(book.genre, vec!["Programming"]);
         assert_eq!(book.publication, 2018);
         assert_eq!(book.status, Status::Available);
     }

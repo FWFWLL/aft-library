@@ -87,21 +87,9 @@ fn render_book_details(
     if let Some(library_index) = library_state.selected() {
         if let Some(book) = library.get(library_index) {
             book_details.push(Line::from(Span::styled(book.title.as_str(), Style::default().bold())));
-
-            book_details.push(Line::from(vec![
-                Span::raw("Author: "),
-                Span::raw(book.author.join(", ")),
-            ]));
-
-            book_details.push(Line::from(vec![
-                Span::raw("Year of Publication: "),
-                Span::raw(book.publication.to_string()),
-            ]));
-
-            book_details.push(Line::from(vec![
-                Span::raw("Genre: "),
-                Span::raw(book.genre.as_str()),
-            ]));
+            book_details.push(Line::from(format!("Author: {}", book.author.join(", "))));
+            book_details.push(Line::from(format!("Genre: {}", book.genre.join(", "))));
+            book_details.push(Line::from(format!("Published in {}", book.publication)));
 
             let mut book_status = vec![Span::raw("Status: ")];
             match book.status {
@@ -114,7 +102,7 @@ fn render_book_details(
                         Style::default().fg(Color::Red),
                     ));
                     book_status.push(Span::styled(
-                        date_time.to_string(),
+                        date_time.format("%Y/%m/%d %T").to_string(),
                         Style::default().fg(Color::Red),
                     ));
                 },

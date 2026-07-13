@@ -108,6 +108,7 @@ impl App {
                 .title("To Kill a Mockingbird")
                 .author("Harper Lee")
                 .genre("Fiction")
+                .genre("Dystopian")
                 .publication(1960)
                 .build()?,
         );
@@ -120,6 +121,8 @@ impl App {
                 .publication(2018)
                 .build()?,
         );
+
+        let _ = self.library[2].check_out();
 
         self.library_state.select(Some(0));
 
