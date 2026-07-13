@@ -2,7 +2,7 @@ use ratatui::Terminal;
 use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self, Event, KeyCode};
 
-use crate::model::Book;
+use crate::book::Book;
 use crate::ui::ui;
 
 pub enum CurrentScreen {
