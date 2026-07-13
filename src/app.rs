@@ -66,7 +66,7 @@ impl App {
         self.save_state()
     }
 
-    fn render<B: Backend>(&self, terminal: &mut Terminal<B>) {
+    fn render<B: Backend>(&mut self, terminal: &mut Terminal<B>) {
         terminal
             .draw(|f| ui(f, self))
             .expect("Failed to draw to terminal");
@@ -120,6 +120,8 @@ impl App {
                 .publication(2018)
                 .build()?,
         );
+
+        self.library_state.select(Some(0));
 
         Ok(())
     }

@@ -5,46 +5,51 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Padding, Paragraph};
 
 use crate::app::App;
+use crate::book::Book;
 
-pub fn ui(frame: &mut Frame, app: &App) {
-    // Frame chunks
-    let [left, right] =
-        Layout::horizontal([Constraint::Percentage(60), Constraint::Percentage(40)])
-            .split(frame.area())[..]
-    else {
-        unreachable!();
-    };
+pub fn ui(frame: &mut Frame, app: &mut App) {
+    let [left_area, right_area] = frame.area().layout(&Layout::horizontal([
+        Constraint::Percentage(60),
+        Constraint::Percentage(40),
+    ]));
+    let [lib_area, nav_area] = left_area.layout(&Layout::vertical([
+        Constraint::Fill(1),
+        Constraint::Length(3),
+    ]));
+    let [search_area, details_area] = right_area.layout(&Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Fill(1),
+    ]));
 
-    // Left chunks
-    let left_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Fill(1), Constraint::Length(3)])
-        .split(left);
+    render_library(frame, lib_area, &app.library, &mut app.library_state);
+    render_nav(frame, nav_area);
+    render_search_bar(frame, search_area);
+    render_book_details(frame, details_area);
+}
 
-    // Left chunk -> Library
-    let library_block = Block::default()
-        .borders(Borders::ALL)
-        .padding(Padding::left(1))
-        .style(Style::default());
+fn render_library(
+    frame: &mut Frame,
+    area: Rect,
+    library: &Vec<Book>,
+    library_state: &mut ListState,
+) {
+    let library_block = Block::bordered().style(Style::default());
 
-    let list_books = app
-        .library
+    let book_titles: Vec<_> = library
         .iter()
-        .enumerate()
-        .map(|(i, book)| {
-            ListItem::new(Line::from(Span::styled(
-                String::from(&book.title),
-                Style::default(),
-            )))
-        })
-        .collect::<Vec<ListItem>>();
+        .map(|book| book.title.as_str())
+        .collect();
 
-    let library = List::new(list_books).block(library_block);
-    frame.render_widget(library, left_chunks[0]);
+    let library = List::new(book_titles)
+        .highlight_style(Modifier::REVERSED)
+        .highlight_symbol("> ")
+        .block(library_block);
 
-    // Left chunk -> Navigation
-    let nav_block = Block::default()
-        .borders(Borders::ALL)
+    frame.render_stateful_widget(library, area, library_state);
+}
+
+fn render_nav(frame: &mut Frame, area: Rect) {
+    let nav_block = Block::bordered()
         .padding(Padding::horizontal(1))
         .style(Style::default());
 
@@ -60,42 +65,27 @@ pub fn ui(frame: &mut Frame, app: &App) {
     ];
 
     let nav = Paragraph::new(Line::from(nav_text)).block(nav_block);
-    frame.render_widget(nav, left_chunks[1]);
+    frame.render_widget(nav, area);
+}
 
-    // Right chunks
-    let right_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Fill(1)])
-        .split(right);
-
-    // Right chunk -> Search
-    let search_block = Block::default()
-        .borders(Borders::ALL)
+fn render_search_bar(frame: &mut Frame, area: Rect) {
+    let search_block = Block::bordered()
         .padding(Padding::horizontal(1))
         .style(Style::default());
 
-    let search_text;
-    if let Some(current_search_text) = &app.current_search_text {
-        search_text = Paragraph::new(current_search_text.clone());
-    } else {
-        search_text = Paragraph::new(Span::styled("Search", Style::default().fg(Color::DarkGray)));
-    }
+    let search_bar = Paragraph::new(Span::styled("Search", Style::default().fg(Color::DarkGray)))
+        .block(search_block);
 
-    let search_bar = search_text.block(search_block);
-    frame.render_widget(search_bar, right_chunks[0]);
+    frame.render_widget(search_bar, area);
+}
 
-    // Right column -> Details
-    let details_block = Block::default()
-        .borders(Borders::ALL)
+fn render_book_details(frame: &mut Frame, area: Rect) {
+    let details_block = Block::bordered()
         .padding(Padding::horizontal(1))
         .style(Style::default());
 
     let mut details_text = Vec::new();
 
     let details = Paragraph::new(Text::from(details_text)).block(details_block);
-    frame.render_widget(details, right_chunks[1]);
+    frame.render_widget(details, area);
 }
-
-fn render_library(frame: &mut Frame, area: Rect, list_state: &ListState) {}
-
-fn render_nav(frame: &mut Frame, area: Rect) {}
