@@ -107,6 +107,7 @@ impl App {
                         };
                         self.current_screen = CurrentScreen::Edit;
                         self.current_field = Some(CurrentField::Title);
+
                         let book = self.library.get(self.library_index).unwrap();
 
                         self.editor_form.title = Input::new(book.title.clone());
@@ -119,6 +120,14 @@ impl App {
                             .get_mut(self.library_state.selected().unwrap())
                             .unwrap()
                             .toggle_status();
+                    },
+                    KeyCode::Char('d') | KeyCode::Delete => {
+                        self.library_index = match self.library_state.selected() {
+                            Some(index) => index,
+                            None => return None,
+                        };
+
+                        self.library.remove(self.library_index);
                     },
                     KeyCode::Char('s') | KeyCode::Char('f') => {
                         self.current_screen = CurrentScreen::Search;
