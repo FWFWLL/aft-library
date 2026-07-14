@@ -1,14 +1,17 @@
 use chrono::DateTime;
 use chrono::Utc;
 
-#[derive(Debug, Default, PartialEq, Eq)]
+use serde::Deserialize;
+use serde::Serialize;
+
+#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Status {
     #[default]
     Available,
     CheckedOut(DateTime<Utc>),
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Book {
     pub title: String,
     pub author: String,

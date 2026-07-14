@@ -1,4 +1,7 @@
-use anyhow::Result;
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Write};
+
+use anyhow::{Ok, Result};
 
 use ratatui::Terminal;
 use ratatui::backend::Backend;
@@ -188,7 +191,7 @@ impl App {
             .genre(genre)
             .year(year.parse().unwrap_or_default())
             .build()
-            .expect("Failed to build `Book` object");
+            .unwrap();
 
         self.library.push(book);
     }
@@ -211,43 +214,23 @@ impl App {
     }
 
     fn load_state(&mut self) -> Result<()> {
-        // TODO: replace with actual loading logic
-        self.library.push(
-            Book::builder()
-                .title("The Great Gatsby")
-                .author("F. Scott Fitzgerald")
-                .genre("Fiction")
-                .year(1925)
-                .build()
-                .unwrap(),
-        );
-        self.library.push(
-            Book::builder()
-                .title("To Kill a Mockingbird")
-                .author("Harper Lee")
-                .genre("Dystopian, Fiction")
-                .year(1960)
-                .build()
-                .unwrap(),
-        );
-        self.library.push(
-            Book::builder()
-                .title("The Rust Programming Language")
-                .author("Steve Klabnik, Carol Nichols")
-                .genre("Programming")
-                .year(2018)
-                .build()
-                .unwrap(),
-        );
+        let file = File::open("state.json")?;
+        let reader = BufReader::new(file);
 
-        let _ = self.library[2].check_out();
-
-        self.library_state.select(Some(0));
+        self.library = serde_json::from_reader(reader)?;
+        self.library_state.select_first();
 
         Ok(())
     }
 
     fn save_state(&self) -> Result<()> {
+        let file = File::create("state.json")?;
+        let mut writer = BufWriter::new(file);
+
+        serde_json::to_writer(&mut writer, &self.library)?;
+
+        writer.flush()?;
+
         Ok(())
     }
 }
