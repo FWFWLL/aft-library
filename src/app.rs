@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 
 use ratatui::Terminal;
 use ratatui::backend::Backend;
