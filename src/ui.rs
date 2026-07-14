@@ -18,7 +18,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         Constraint::Length(3),
     ]));
 
-    render_library(frame, lib_area, &app.library, &mut app.library_state);
+    render_library(frame, lib_area, app);
     render_nav(frame, nav_area);
 
     match app.current_screen {
@@ -28,28 +28,61 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
                 Constraint::Fill(1),
             ]));
 
-            render_search_bar(frame, search_area);
+            render_search_bar(frame, search_area, &app);
             render_book_details(frame, details_area, &app.library, &app.library_state);
         },
         CurrentScreen::Registration | CurrentScreen::Edit => {
             render_book_editor_form(frame, right_area, app);
         },
-        _ => {},
+        CurrentScreen::Search => {
+            let [search_area, details_area] = right_area.layout(&Layout::vertical([
+                Constraint::Length(3),
+                Constraint::Fill(1),
+            ]));
+
+            render_search_bar(frame, search_area, &app);
+            render_book_details(frame, details_area, &app.library, &app.library_state);
+        },
     }
 }
 
-fn render_library(frame: &mut Frame, area: Rect, library: &Vec<Book>, library_state: &mut ListState) {
-    let book_titles = library.iter().map(|book| book.title.as_str()).collect::<Vec<_>>();
+fn render_library(frame: &mut Frame, area: Rect, app: &mut App) {
+    let book_titles = app
+        .library
+        .iter()
+        .filter_map(|book| {
+            let book_title = book.title.as_str();
+
+            let search = app.search_input.value();
+            if search.is_empty() {
+                Some(book_title)
+            } else {
+                let book_author = &book.author;
+                if book_title.find(search).is_some() || book_author.find(search).is_some() {
+                    return Some(book_title);
+                }
+
+                None
+            }
+        })
+        // .map(|book| book.title.as_str())
+        .collect::<Vec<_>>();
 
     let library = List::new(book_titles)
         .highlight_style(Modifier::REVERSED)
-        .block(Block::bordered());
+        .block(
+            Block::bordered()
+                .title(Span::raw("Library").bold())
+                .padding(Padding::horizontal(1)),
+        );
 
-    frame.render_stateful_widget(library, area, library_state);
+    frame.render_stateful_widget(library, area, &mut app.library_state);
 }
 
 fn render_nav(frame: &mut Frame, area: Rect) {
-    let nav_block = Block::bordered().padding(Padding::horizontal(1)).style(Style::default());
+    let nav_block = Block::bordered()
+        .padding(Padding::horizontal(1))
+        .style(Style::default());
 
     let nav_text = vec![
         Span::styled("R", Style::default().add_modifier(Modifier::UNDERLINED)),
@@ -66,28 +99,50 @@ fn render_nav(frame: &mut Frame, area: Rect) {
     frame.render_widget(nav, area);
 }
 
-fn render_search_bar(frame: &mut Frame, area: Rect) {
-    let search_block = Block::bordered().padding(Padding::horizontal(1)).style(Style::default());
+fn render_search_bar(frame: &mut Frame, area: Rect, app: &App) {
+    let search_bar_style = if app.current_field == Some(CurrentField::Search) {
+        Style::default().blue()
+    } else {
+        Style::default()
+    };
 
-    let search_bar = Paragraph::new(Span::styled("Search", Style::default().fg(Color::DarkGray))).block(search_block);
+    let search_bar = Paragraph::new(app.search_input.value()).block(
+        Block::bordered()
+            .title(Span::raw("Search").bold())
+            .padding(Padding::horizontal(1))
+            .style(search_bar_style),
+    );
 
     frame.render_widget(search_bar, area);
 }
 
-fn render_book_details(frame: &mut Frame, area: Rect, library: &Vec<Book>, library_state: &ListState) {
+fn render_book_details(
+    frame: &mut Frame,
+    area: Rect,
+    library: &Vec<Book>,
+    library_state: &ListState,
+) {
     let mut book_details = Vec::default();
     if let Some(library_index) = library_state.selected() {
         if let Some(book) = library.get(library_index) {
-            book_details.push(Line::from(Span::styled(book.title.as_str(), Style::default().bold())));
+            book_details.push(Line::from(Span::styled(
+                book.title.as_str(),
+                Style::default().bold(),
+            )));
             book_details.push(Line::from(format!("Author: {}", book.author)));
             book_details.push(Line::from(format!("Genre: {}", book.genre)));
             book_details.push(Line::from(format!("Published in {}", book.year)));
 
             let mut book_status = vec![Span::raw("Status: ")];
             match book.status {
-                Status::Available => book_status.push(Span::styled("Available", Style::default().fg(Color::Green))),
+                Status::Available => {
+                    book_status.push(Span::styled("Available", Style::default().fg(Color::Green)))
+                },
                 Status::CheckedOut(date_time) => {
-                    book_status.push(Span::styled("Checked out ", Style::default().fg(Color::Red)));
+                    book_status.push(Span::styled(
+                        "Checked out ",
+                        Style::default().fg(Color::Red),
+                    ));
                     book_status.push(Span::styled(
                         date_time.format("%Y/%m/%d %T").to_string(),
                         Style::default().fg(Color::Red),
@@ -98,7 +153,8 @@ fn render_book_details(frame: &mut Frame, area: Rect, library: &Vec<Book>, libra
         }
     };
 
-    let details = Paragraph::new(book_details).block(Block::bordered());
+    let details =
+        Paragraph::new(book_details).block(Block::bordered().padding(Padding::horizontal(1)));
     frame.render_widget(details, area);
 }
 
@@ -154,6 +210,7 @@ fn render_book_editor_form(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(genre_input, genre_area);
     frame.render_widget(year_input, year_area);
 
+    let cancel_text = "Cancel";
     let enter_text = match app.current_screen {
         CurrentScreen::Registration => "Register",
         CurrentScreen::Edit => "Save",
@@ -161,17 +218,16 @@ fn render_book_editor_form(frame: &mut Frame, area: Rect, app: &mut App) {
     };
 
     let [cancel_area, _, enter_area] = instruction_area.layout(&Layout::horizontal([
-        Constraint::Length(10),
+        Constraint::Length(cancel_text.len() as u16 + 4),
         Constraint::Fill(1),
         Constraint::Length(enter_text.len() as u16 + 4),
     ]));
 
-    let cancel = Paragraph::new(Line::from("Cancel")).block(
+    let cancel = Paragraph::new(Line::from(cancel_text)).block(
         Block::bordered()
             .title(Span::raw("Esc").bold())
             .padding(Padding::horizontal(1)),
     );
-
     frame.render_widget(cancel, cancel_area);
 
     let register = Paragraph::new(Line::from(enter_text).right_aligned()).block(
@@ -179,6 +235,5 @@ fn render_book_editor_form(frame: &mut Frame, area: Rect, app: &mut App) {
             .title(Span::raw("Enter").bold())
             .padding(Padding::horizontal(1)),
     );
-
     frame.render_widget(register, enter_area);
 }

@@ -23,6 +23,7 @@ pub enum CurrentScreen {
     Search,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum CurrentField {
     Title,
     Author,
@@ -76,7 +77,9 @@ impl App {
     }
 
     fn render<B: Backend>(&mut self, terminal: &mut Terminal<B>) {
-        terminal.draw(|f| ui(f, self)).expect("Failed to draw to terminal");
+        terminal
+            .draw(|f| ui(f, self))
+            .expect("Failed to draw to terminal");
     }
 
     fn update(&mut self) -> Option<Message> {
@@ -92,16 +95,18 @@ impl App {
                     KeyCode::Char('j') | KeyCode::Down => self.library_state.select_next(),
                     KeyCode::Char('k') | KeyCode::Up => self.library_state.select_previous(),
                     KeyCode::Char('r') | KeyCode::Char('a') => {
-                        self.library_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
+                        self.library_index = self.library_state.selected().unwrap_or_default();
                         self.library_state.select(None);
                         self.current_screen = CurrentScreen::Registration;
                         self.current_field = Some(CurrentField::Title);
                     },
                     KeyCode::Char('e') | KeyCode::Char('c') => {
-                        self.library_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
+                        self.library_index = match self.library_state.selected() {
+                            Some(index) => index,
+                            None => return None,
+                        };
                         self.current_screen = CurrentScreen::Edit;
                         self.current_field = Some(CurrentField::Title);
-
                         let book = self.library.get(self.library_index).unwrap();
 
                         self.editor_form.title = Input::new(book.title.clone());
@@ -110,8 +115,14 @@ impl App {
                         self.editor_form.year = Input::new(book.year.to_string());
                     },
                     KeyCode::Char('t') => {
-                        let book = self.library.get_mut(self.library_state.selected().unwrap()).unwrap();
-                        book.toggle_status();
+                        self.library
+                            .get_mut(self.library_state.selected().unwrap())
+                            .unwrap()
+                            .toggle_status();
+                    },
+                    KeyCode::Char('s') | KeyCode::Char('f') => {
+                        self.current_screen = CurrentScreen::Search;
+                        self.current_field = Some(CurrentField::Search);
                     },
                     _ => return None,
                 },
@@ -146,16 +157,24 @@ impl App {
                         self.current_field = None;
                     },
                     KeyCode::Tab | KeyCode::Down => match self.current_field {
-                        Some(CurrentField::Title) => self.current_field = Some(CurrentField::Author),
-                        Some(CurrentField::Author) => self.current_field = Some(CurrentField::Genre),
+                        Some(CurrentField::Title) => {
+                            self.current_field = Some(CurrentField::Author)
+                        },
+                        Some(CurrentField::Author) => {
+                            self.current_field = Some(CurrentField::Genre)
+                        },
                         Some(CurrentField::Genre) => self.current_field = Some(CurrentField::Year),
                         Some(CurrentField::Year) => self.current_field = Some(CurrentField::Title),
                         _ => {},
                     },
                     KeyCode::BackTab | KeyCode::Up => match self.current_field {
                         Some(CurrentField::Title) => self.current_field = Some(CurrentField::Year),
-                        Some(CurrentField::Author) => self.current_field = Some(CurrentField::Title),
-                        Some(CurrentField::Genre) => self.current_field = Some(CurrentField::Author),
+                        Some(CurrentField::Author) => {
+                            self.current_field = Some(CurrentField::Title)
+                        },
+                        Some(CurrentField::Genre) => {
+                            self.current_field = Some(CurrentField::Author)
+                        },
                         Some(CurrentField::Year) => self.current_field = Some(CurrentField::Genre),
                         _ => {},
                     },
@@ -176,7 +195,16 @@ impl App {
                     },
                     _ => return None,
                 },
-                CurrentScreen::Search => todo!(),
+                CurrentScreen::Search => match key.code {
+                    KeyCode::Esc | KeyCode::Enter => {
+                        self.current_screen = CurrentScreen::Library;
+                        self.current_field = None;
+                    },
+                    _ if self.current_field == Some(CurrentField::Search) => {
+                        self.search_input.handle_event(&event);
+                    },
+                    _ => return None,
+                },
             }
         }
 
