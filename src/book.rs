@@ -144,4 +144,16 @@ mod test_book_builder {
         assert_eq!(book.year, 2018);
         assert_eq!(book.status, Status::Available);
     }
+
+    #[test]
+    fn test_incomplete_book_builder() {
+        let book = BookBuilder::new()
+            .build();
+
+        assert_eq!(book.title, "");
+        assert_eq!(book.author, "");
+        assert_eq!(book.genre, "");
+        assert_eq!(book.year, 0);
+        assert_eq!(book.status, Status::Available);
+    }
 }
