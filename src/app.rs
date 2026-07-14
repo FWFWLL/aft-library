@@ -270,11 +270,12 @@ impl App {
     }
 
     fn load_state(&mut self) -> Result<()> {
-        let file = File::open("library.json")?;
-        let reader = BufReader::new(file);
+        if let Ok(file) = File::open("library.json") {
+            let reader = BufReader::new(file);
 
-        self.library = serde_json::from_reader(reader)?;
-        self.library_state.select_first();
+            self.library = serde_json::from_reader(reader)?;
+            self.library_state.select_first();
+        };
 
         Ok(())
     }
