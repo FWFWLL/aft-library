@@ -1,19 +1,14 @@
 use chrono::DateTime;
 use chrono::Utc;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub enum Status {
+    #[default]
     Available,
     CheckedOut(DateTime<Utc>),
 }
 
-impl Default for Status {
-    fn default() -> Self {
-        Status::Available
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Book {
     pub title: String,
     pub author: String,
@@ -30,7 +25,7 @@ impl Book {
             author,
             genre,
             year,
-            status: Status::default(),
+            ..Default::default()
         }
     }
 
