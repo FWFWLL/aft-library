@@ -4,7 +4,7 @@ use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, List, ListState, Padding, Paragraph};
 
-use crate::app::{App, CurrentField, CurrentScreen};
+use crate::app::{App, CurrentField, CurrentScreen, StatusFilter};
 use crate::book::{Book, Status};
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
@@ -19,7 +19,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
     ]));
 
     render_library(frame, lib_area, app);
-    render_nav(frame, nav_area);
+    render_nav(frame, nav_area, app);
 
     match app.current_screen {
         CurrentScreen::Library => {
@@ -50,6 +50,11 @@ fn render_library(frame: &mut Frame, area: Rect, app: &mut App) {
     let book_titles = app
         .library
         .iter()
+        .filter(|book| match app.status_filter {
+            StatusFilter::All => true,
+            StatusFilter::Available => book.status == Status::Available,
+            StatusFilter::CheckedOut => book.status != Status::Available,
+        })
         .filter_map(|book| {
             let book_title = book.title.as_str();
 
@@ -79,21 +84,29 @@ fn render_library(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_stateful_widget(library, area, &mut app.library_state);
 }
 
-fn render_nav(frame: &mut Frame, area: Rect) {
+fn render_nav(frame: &mut Frame, area: Rect, app: &App) {
     let nav_block = Block::bordered()
         .padding(Padding::horizontal(1))
         .style(Style::default());
 
-    let nav_text = vec![
-        Span::styled("R", Style::default().add_modifier(Modifier::UNDERLINED)),
+    let mut nav_text = vec![
+        Span::styled("Q", Style::default().underlined()),
+        Span::raw("uit | "),
+        Span::styled("R", Style::default().underlined()),
         Span::raw("egister New Book | "),
-        Span::styled("S", Style::default().add_modifier(Modifier::UNDERLINED)),
+        Span::styled("S", Style::default().underlined()),
         Span::raw("earch | "),
-        Span::styled("T", Style::default().add_modifier(Modifier::UNDERLINED)),
+        Span::styled("T", Style::default().underlined()),
         Span::raw("oggle Status | "),
-        Span::styled("Q", Style::default().add_modifier(Modifier::UNDERLINED)),
-        Span::raw("uit"),
+        Span::styled("F", Style::default().underlined()),
+        Span::raw("iltering for "),
     ];
+
+    match app.status_filter {
+        StatusFilter::All => nav_text.push(Span::styled("All", Style::default().italic())),
+        StatusFilter::Available => nav_text.push(Span::styled("Available", Style::default().italic())),
+        StatusFilter::CheckedOut => nav_text.push(Span::styled("Checked Out", Style::default().italic())),
+    };
 
     let nav = Paragraph::new(Line::from(nav_text)).block(nav_block);
     frame.render_widget(nav, area);

@@ -23,7 +23,7 @@ pub enum CurrentScreen {
     Search,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub enum CurrentField {
     Title,
     Author,
@@ -40,6 +40,14 @@ pub struct EditorForm {
     pub year: Input,
 }
 
+#[derive(Default)]
+pub enum StatusFilter {
+    #[default]
+    All,
+    Available,
+    CheckedOut,
+}
+
 // Application state
 #[derive(Default)]
 pub struct App {
@@ -50,6 +58,7 @@ pub struct App {
     pub library_index: usize,
     pub editor_form: EditorForm,
     pub search_input: Input,
+    pub status_filter: StatusFilter,
 }
 
 enum Message {
@@ -129,9 +138,16 @@ impl App {
 
                         self.library.remove(self.library_index);
                     },
-                    KeyCode::Char('s') | KeyCode::Char('f') => {
+                    KeyCode::Char('s') => {
                         self.current_screen = CurrentScreen::Search;
                         self.current_field = Some(CurrentField::Search);
+                    },
+                    KeyCode::Char('f') => {
+                        self.status_filter = match self.status_filter {
+                            StatusFilter::All => StatusFilter::Available,
+                            StatusFilter::Available => StatusFilter::CheckedOut,
+                            StatusFilter::CheckedOut => StatusFilter::All,
+                        };
                     },
                     _ => return None,
                 },
