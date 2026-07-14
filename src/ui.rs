@@ -53,11 +53,11 @@ fn render_nav(frame: &mut Frame, area: Rect) {
 
     let nav_text = vec![
         Span::styled("R", Style::default().add_modifier(Modifier::UNDERLINED)),
-        Span::raw("egister | "),
+        Span::raw("egister New Book | "),
         Span::styled("S", Style::default().add_modifier(Modifier::UNDERLINED)),
         Span::raw("earch | "),
-        Span::styled("C", Style::default().add_modifier(Modifier::UNDERLINED)),
-        Span::raw("heckout | "),
+        Span::styled("T", Style::default().add_modifier(Modifier::UNDERLINED)),
+        Span::raw("oggle Status | "),
         Span::styled("Q", Style::default().add_modifier(Modifier::UNDERLINED)),
         Span::raw("uit"),
     ];

@@ -1,6 +1,3 @@
-use anyhow::Result;
-use anyhow::anyhow;
-
 use chrono::DateTime;
 use chrono::Utc;
 
@@ -39,14 +36,10 @@ impl Book {
         BookBuilder::new()
     }
 
-    pub fn check_out(&mut self) -> Result<DateTime<Utc>> {
+    pub fn toggle_status(&mut self) {
         match self.status {
-            Status::Available => {
-                let now = chrono::Utc::now();
-                self.status = Status::CheckedOut(now);
-                Ok(now)
-            },
-            Status::CheckedOut(_) => Err(anyhow!("Book is already checked out")),
+            Status::Available => self.status = Status::CheckedOut(chrono::Utc::now()),
+            Status::CheckedOut(_) => self.status = Status::Available,
         }
     }
 }
@@ -124,12 +117,11 @@ mod test_book {
             2018,
         );
 
-        let result = book.check_out();
-        assert_eq!(result.is_ok(), true);
-        assert_eq!(book.status, Status::CheckedOut(result.unwrap()));
+        book.toggle_status();
+        std::assert_matches!(book.status, Status::CheckedOut(_));
 
-        let result = book.check_out();
-        assert_eq!(result.is_err(), true);
+        book.toggle_status();
+        std::assert_matches!(book.status, Status::Available);
     }
 }
 

@@ -97,7 +97,7 @@ impl App {
                         self.current_screen = CurrentScreen::Registration;
                         self.current_field = Some(CurrentField::Title);
                     },
-                    KeyCode::Char('e') => {
+                    KeyCode::Char('e') | KeyCode::Char('c') => {
                         self.library_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
                         self.current_screen = CurrentScreen::Edit;
                         self.current_field = Some(CurrentField::Title);
@@ -108,6 +108,10 @@ impl App {
                         self.editor_form.author = Input::new(book.author.clone());
                         self.editor_form.genre = Input::new(book.genre.clone());
                         self.editor_form.year = Input::new(book.year.to_string());
+                    },
+                    KeyCode::Char('t') => {
+                        let book = self.library.get_mut(self.library_state.selected().unwrap()).unwrap();
+                        book.toggle_status();
                     },
                     _ => return None,
                 },
