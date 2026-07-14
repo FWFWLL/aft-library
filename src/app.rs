@@ -6,14 +6,15 @@ use ratatui::widgets::ListState;
 use tui_input::Input;
 use tui_input::backend::crossterm::EventHandler;
 
-use crate::book::{Book, BookBuilder};
+use crate::book::Book;
 use crate::ui::ui;
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq)]
 pub enum CurrentScreen {
     #[default]
     Library,
     Registration,
+    Edit,
     Search,
 }
 
@@ -21,16 +22,16 @@ pub enum CurrentField {
     Title,
     Author,
     Genre,
-    Publication,
+    Year,
     Search,
 }
 
 #[derive(Default)]
-pub struct RegistrationForm {
+pub struct EditorForm {
     pub title: Input,
     pub author: Input,
     pub genre: Input,
-    pub publication: Input,
+    pub year: Input,
 }
 
 // Application state
@@ -41,7 +42,7 @@ pub struct App {
     pub library: Vec<Book>,
     pub library_state: ListState,
     pub prev_index: usize,
-    pub registration_form: RegistrationForm,
+    pub editor_form: EditorForm,
     pub search_input: Input,
 }
 
@@ -91,34 +92,54 @@ impl App {
                     KeyCode::Char('j') | KeyCode::Down => self.library_state.select_next(),
                     KeyCode::Char('k') | KeyCode::Up => self.library_state.select_previous(),
                     KeyCode::Char('r') | KeyCode::Char('a') => {
-                        self.prev_index = self.library_state.selected().unwrap(); // Should never be `None`
+                        self.prev_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
                         self.library_state.select(None);
                         self.current_screen = CurrentScreen::Registration;
                         self.current_field = Some(CurrentField::Title);
                     },
+                    KeyCode::Char('e') => {
+                        self.prev_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
+                        self.current_screen = CurrentScreen::Edit;
+                        self.current_field = Some(CurrentField::Title);
+
+                        let book = self.library.get(self.prev_index).unwrap();
+
+                        self.editor_form.title = Input::new(book.title.clone());
+                        self.editor_form.author = Input::new(book.author.clone());
+                        self.editor_form.genre = Input::new(book.genre.clone());
+                        self.editor_form.year = Input::new(book.year.to_string());
+                    },
                     _ => return None,
                 },
-                CurrentScreen::Registration => match key.code {
+                CurrentScreen::Registration | CurrentScreen::Edit => match key.code {
                     KeyCode::Esc => {
+                        if self.current_screen == CurrentScreen::Edit {
+                            self.editor_form.title.reset();
+                            self.editor_form.author.reset();
+                            self.editor_form.genre.reset();
+                            self.editor_form.year.reset();
+                        }
+
                         self.library_state.select(Some(self.prev_index));
+
                         self.current_screen = CurrentScreen::Library;
                         self.current_field = None;
                     },
                     KeyCode::Enter => {
-                        match self.register_book() {
-                            Ok(_) => {
-                                self.library_state.select_last();
-                                self.current_screen = CurrentScreen::Library;
-                                self.current_field = None;
+                        if self.current_screen == CurrentScreen::Registration {
+                            self.register_book();
+                            self.library_state.select_last();
+                        } else {
+                            self.edit_book();
+                        }
 
-                                self.registration_form.title.reset();
-                                self.registration_form.author.reset();
-                                self.registration_form.genre.reset();
-                                self.registration_form.publication.reset();
-                            },
-                            Err(_) => panic!("How?"),
-                        };
-                        
+                        self.editor_form.title.reset();
+                        self.editor_form.author.reset();
+                        self.editor_form.genre.reset();
+                        self.editor_form.year.reset();
+
+                        self.current_screen = CurrentScreen::Library;
+                        self.current_field = None;
                     },
                     KeyCode::Tab | KeyCode::Down => match self.current_field {
                         Some(CurrentField::Title) => {
@@ -127,41 +148,33 @@ impl App {
                         Some(CurrentField::Author) => {
                             self.current_field = Some(CurrentField::Genre)
                         },
-                        Some(CurrentField::Genre) => {
-                            self.current_field = Some(CurrentField::Publication)
-                        },
-                        Some(CurrentField::Publication) => {
-                            self.current_field = Some(CurrentField::Title)
-                        },
+                        Some(CurrentField::Genre) => self.current_field = Some(CurrentField::Year),
+                        Some(CurrentField::Year) => self.current_field = Some(CurrentField::Title),
                         _ => {},
                     },
                     KeyCode::BackTab | KeyCode::Up => match self.current_field {
-                        Some(CurrentField::Title) => {
-                            self.current_field = Some(CurrentField::Publication)
-                        },
+                        Some(CurrentField::Title) => self.current_field = Some(CurrentField::Year),
                         Some(CurrentField::Author) => {
                             self.current_field = Some(CurrentField::Title)
                         },
                         Some(CurrentField::Genre) => {
                             self.current_field = Some(CurrentField::Author)
                         },
-                        Some(CurrentField::Publication) => {
-                            self.current_field = Some(CurrentField::Genre)
-                        },
+                        Some(CurrentField::Year) => self.current_field = Some(CurrentField::Genre),
                         _ => {},
                     },
                     _ if let Some(current_field) = &self.current_field => match current_field {
                         CurrentField::Title => {
-                            self.registration_form.title.handle_event(&event);
+                            self.editor_form.title.handle_event(&event);
                         },
                         CurrentField::Author => {
-                            self.registration_form.author.handle_event(&event);
+                            self.editor_form.author.handle_event(&event);
                         },
                         CurrentField::Genre => {
-                            self.registration_form.genre.handle_event(&event);
+                            self.editor_form.genre.handle_event(&event);
                         },
-                        CurrentField::Publication => {
-                            self.registration_form.publication.handle_event(&event);
+                        CurrentField::Year => {
+                            self.editor_form.year.handle_event(&event);
                         },
                         _ => {},
                     },
@@ -174,22 +187,38 @@ impl App {
         None
     }
 
-    fn register_book(&mut self) -> Result<(), &'static str> {
-        let title = self.registration_form.title.value();
-        let author = self.registration_form.author.value();
-        let genre = self.registration_form.genre.value();
-        let publication = self.registration_form.publication.value();
+    fn register_book(&mut self) {
+        let title = self.editor_form.title.value();
+        let author = self.editor_form.author.value();
+        let genre = self.editor_form.genre.value();
+        let year = self.editor_form.year.value();
 
         let book = Book::builder()
             .title(title)
             .author(author)
             .genre(genre)
-            .publication(publication.parse().unwrap_or_default())
-            .build()?;
+            .year(year.parse().unwrap_or_default())
+            .build()
+            .expect("Failed to build `Book` object");
 
         self.library.push(book);
+    }
 
-        Ok(())
+    fn edit_book(&mut self) {
+        let title = self.editor_form.title.value();
+        let author = self.editor_form.author.value();
+        let genre = self.editor_form.genre.value();
+        let publication = self.editor_form.year.value();
+
+        match self.library.get_mut(self.prev_index) {
+            Some(book) => {
+                book.title = title.to_string();
+                book.author = author.to_string();
+                book.genre = genre.to_string();
+                book.year = publication.parse().unwrap_or_default();
+            },
+            None => unreachable!(),
+        };
     }
 
     fn load_state(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -199,25 +228,23 @@ impl App {
                 .title("The Great Gatsby")
                 .author("F. Scott Fitzgerald")
                 .genre("Fiction")
-                .publication(1925)
+                .year(1925)
                 .build()?,
         );
         self.library.push(
             Book::builder()
                 .title("To Kill a Mockingbird")
                 .author("Harper Lee")
-                .genre("Fiction")
-                .genre("Dystopian")
-                .publication(1960)
+                .genre("Dystopian, Fiction")
+                .year(1960)
                 .build()?,
         );
         self.library.push(
             Book::builder()
                 .title("The Rust Programming Language")
-                .author("Steve Klabnik")
-                .author("Carol Nichols")
+                .author("Steve Klabnik, Carol Nichols")
                 .genre("Programming")
-                .publication(2018)
+                .year(2018)
                 .build()?,
         );
 

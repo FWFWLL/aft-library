@@ -16,20 +16,20 @@ impl Default for Status {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Book {
     pub title: String,
-    pub author: Vec<String>,
-    pub genre: Vec<String>, // Books can have multiple genres
-    pub publication: u32,   // Year of publication
+    pub author: String,
+    pub genre: String,    // Books can have multiple genres
+    pub year: u32, // Year of publication
     pub status: Status,
 }
 
 impl Book {
     // Discouraged to use this constructor directly, use the builder instead
-    fn new(title: String, author: Vec<String>, genre: Vec<String>, publication: u32) -> Self {
+    fn new(title: String, author: String, genre: String, year: u32) -> Self {
         Book {
             title,
             author,
             genre,
-            publication,
+            year,
             status: Status::default(),
         }
     }
@@ -54,8 +54,8 @@ impl Book {
 #[derive(Debug, Default)]
 pub struct BookBuilder {
     title: Option<String>,
-    author: Option<Vec<String>>,
-    genre: Option<Vec<String>>,
+    author: Option<String>,
+    genre: Option<String>,
     publication: Option<u32>,
 }
 
@@ -70,26 +70,16 @@ impl BookBuilder {
     }
 
     pub fn author(mut self, author: &str) -> Self {
-        if self.author.is_none() {
-            self.author = Some(vec![String::from(author)]);
-        } else {
-            self.author.as_mut().unwrap().push(String::from(author));
-        }
-
+        self.author = Some(String::from(author));
         self
     }
 
     pub fn genre(mut self, genre: &str) -> Self {
-        if self.genre.is_none() {
-            self.genre = Some(vec![String::from(genre)]);
-        } else {
-            self.genre.as_mut().unwrap().push(String::from(genre));
-        }
-
+        self.genre = Some(String::from(genre));
         self
     }
 
-    pub fn publication(mut self, publication: u32) -> Self {
+    pub fn year(mut self, publication: u32) -> Self {
         self.publication = Some(publication);
         self
     }
@@ -127,18 +117,15 @@ mod test_book {
     fn test_book_creation() {
         let book = Book::new(
             String::from("The Rust Programming Language"),
-            vec![String::from("Steve Klabnik"), String::from("Carol Nichols")],
-            vec![String::from("Programming")],
+            String::from("Steve Klabnik, Carol Nichols"),
+            String::from("Programming"),
             2018,
         );
 
         assert_eq!(book.title, "The Rust Programming Language");
-        assert_eq!(
-            book.author,
-            vec![String::from("Steve Klabnik"), String::from("Carol Nichols")]
-        );
-        assert_eq!(book.genre, vec!["Programming"]);
-        assert_eq!(book.publication, 2018);
+        assert_eq!(book.author, "Steve Klabnik, Carol Nichols",);
+        assert_eq!(book.genre, "Programming");
+        assert_eq!(book.year, 2018);
         assert_eq!(book.status, Status::Available);
     }
 
@@ -146,8 +133,8 @@ mod test_book {
     fn test_book_check_out() {
         let mut book = Book::new(
             String::from("The Rust Programming Language"),
-            vec![String::from("Steve Klabnik"), String::from("Carol Nichols")],
-            vec![String::from("Programming")],
+            String::from("Steve Klabnik, Carol Nichols"),
+            String::from("Programming"),
             2018,
         );
 
@@ -168,10 +155,9 @@ mod test_book_builder {
     fn test_book_builder() {
         let book = BookBuilder::new()
             .title("The Rust Programming Language")
-            .author("Steve Klabnik")
-            .author("Carol Nichols")
+            .author("Steve Klabnik, Carol Nichols")
             .genre("Programming")
-            .publication(2018)
+            .year(2018)
             .build();
 
         assert_eq!(book.is_ok(), true);
@@ -179,22 +165,18 @@ mod test_book_builder {
         let book = book.unwrap();
 
         assert_eq!(book.title, "The Rust Programming Language");
-        assert_eq!(
-            book.author,
-            vec![String::from("Steve Klabnik"), String::from("Carol Nichols")]
-        );
-        assert_eq!(book.genre, vec!["Programming"]);
-        assert_eq!(book.publication, 2018);
+        assert_eq!(book.author, "Steve Klabnik, Carol Nichols");
+        assert_eq!(book.genre, "Programming");
+        assert_eq!(book.year, 2018);
         assert_eq!(book.status, Status::Available);
     }
 
     #[test]
     fn test_book_builder_error() {
         let book = BookBuilder::new()
-            .author("Steve Klabnik")
-            .author("Carol Nichols")
+            .author("Steve Klabnik, Carol Nichols")
             .genre("Programming")
-            .publication(2018)
+            .year(2018)
             .build();
 
         assert_eq!(book.is_err(), true);

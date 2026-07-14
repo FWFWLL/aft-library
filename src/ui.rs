@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListState, Padding, Paragraph, Wrap};
+use ratatui::widgets::{Block, List, ListState, Padding, Paragraph};
 
 use crate::app::{App, CurrentField, CurrentScreen};
 use crate::book::{Book, Status};
@@ -31,7 +31,10 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             render_book_details(frame, details_area, &app.library, &app.library_state);
         },
         CurrentScreen::Registration => {
-            render_registration_form(frame, right_area, app);
+            render_book_editor_form(frame, right_area, app);
+        },
+        CurrentScreen::Edit => {
+            render_book_editor_form(frame, right_area, app);
         },
         _ => {},
     }
@@ -99,9 +102,9 @@ fn render_book_details(
                 book.title.as_str(),
                 Style::default().bold(),
             )));
-            book_details.push(Line::from(format!("Author: {}", book.author.join(", "))));
-            book_details.push(Line::from(format!("Genre: {}", book.genre.join(", "))));
-            book_details.push(Line::from(format!("Published in {}", book.publication)));
+            book_details.push(Line::from(format!("Author: {}", book.author)));
+            book_details.push(Line::from(format!("Genre: {}", book.genre)));
+            book_details.push(Line::from(format!("Published in {}", book.year)));
 
             let mut book_status = vec![Span::raw("Status: ")];
             match book.status {
@@ -127,14 +130,20 @@ fn render_book_details(
     frame.render_widget(details, area);
 }
 
-fn render_registration_form(frame: &mut Frame, area: Rect, app: &mut App) {
-    let registration_block = Block::bordered().title("Register new book");
+fn render_book_editor_form(frame: &mut Frame, area: Rect, app: &mut App) {
+    let block_title = match app.current_screen {
+        CurrentScreen::Registration => "Registering New Book",
+        CurrentScreen::Edit => "Editing Book",
+        _ => unreachable!(),
+    };
+
+    let editor_block = Block::bordered().title(block_title);
 
     let [
         title_area,
         author_area,
         genre_area,
-        publication_area,
+        year_area,
         _,
         instruction_area,
     ] = area.layout(
@@ -158,33 +167,46 @@ fn render_registration_form(frame: &mut Frame, area: Rect, app: &mut App) {
         Some(CurrentField::Title) => title_block = title_block.blue(),
         Some(CurrentField::Author) => author_block = author_block.blue(),
         Some(CurrentField::Genre) => genre_block = genre_block.blue(),
-        Some(CurrentField::Publication) => publicatoin_block = publicatoin_block.blue(),
+        Some(CurrentField::Year) => publicatoin_block = publicatoin_block.blue(),
         _ => {},
     }
 
-    let title_input = Paragraph::new(app.registration_form.title.value()).block(title_block);
-    let author_input = Paragraph::new(app.registration_form.author.value()).block(author_block);
-    let genre_input = Paragraph::new(app.registration_form.genre.value()).block(genre_block);
-    let publication_input =
-        Paragraph::new(app.registration_form.publication.value()).block(publicatoin_block);
+    let title_input = Paragraph::new(app.editor_form.title.value()).block(title_block);
+    let author_input = Paragraph::new(app.editor_form.author.value()).block(author_block);
+    let genre_input = Paragraph::new(app.editor_form.genre.value()).block(genre_block);
+    let year_input = Paragraph::new(app.editor_form.year.value()).block(publicatoin_block);
 
-    frame.render_widget(registration_block, area);
+    frame.render_widget(editor_block, area);
     frame.render_widget(title_input, title_area);
     frame.render_widget(author_input, author_area);
     frame.render_widget(genre_input, genre_area);
-    frame.render_widget(publication_input, publication_area);
+    frame.render_widget(year_input, year_area);
 
-    let [cancel_area, _, register_area] = instruction_area.layout(&Layout::horizontal([
-        Constraint::Length(8),
-        Constraint::Fill(1),
+    let enter_text = match app.current_screen {
+        CurrentScreen::Registration => "Register",
+        CurrentScreen::Edit => "Save",
+        _ => unreachable!(),
+    };
+
+    let [cancel_area, _, enter_area] = instruction_area.layout(&Layout::horizontal([
         Constraint::Length(10),
+        Constraint::Fill(1),
+        Constraint::Length(enter_text.len() as u16 + 4),
     ]));
 
-    let cancel = Paragraph::new(Line::from("Cancel"))
-        .block(Block::bordered().title(Span::raw("Esc").bold()));
-    let register = Paragraph::new(Line::from("Register").right_aligned())
-        .block(Block::bordered().title(Span::raw("Enter").bold()));
+    let cancel = Paragraph::new(Line::from("Cancel")).block(
+        Block::bordered()
+            .title(Span::raw("Esc").bold())
+            .padding(Padding::horizontal(1)),
+    );
 
     frame.render_widget(cancel, cancel_area);
-    frame.render_widget(register, register_area);
+
+    let register = Paragraph::new(Line::from(enter_text).right_aligned()).block(
+        Block::bordered()
+            .title(Span::raw("Enter").bold())
+            .padding(Padding::horizontal(1)),
+    );
+
+    frame.render_widget(register, enter_area);
 }
