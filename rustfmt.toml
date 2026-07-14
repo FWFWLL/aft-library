@@ -1,1 +1,3 @@
+max_width = 128
+array_width = 32
 match_block_trailing_comma = true

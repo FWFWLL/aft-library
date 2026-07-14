@@ -17,8 +17,8 @@ impl Default for Status {
 pub struct Book {
     pub title: String,
     pub author: String,
-    pub genre: String,    // Books can have multiple genres
-    pub year: u32, // Year of publication
+    pub genre: String, // Books can have multiple genres
+    pub year: u32,     // Year of publication
     pub status: Status,
 }
 

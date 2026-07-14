@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use ratatui::Terminal;
 use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self, Event, KeyCode};
@@ -41,7 +43,7 @@ pub struct App {
     pub current_field: Option<CurrentField>,
     pub library: Vec<Book>,
     pub library_state: ListState,
-    pub prev_index: usize,
+    pub library_index: usize,
     pub editor_form: EditorForm,
     pub search_input: Input,
 }
@@ -55,10 +57,7 @@ impl App {
         App::default()
     }
 
-    pub fn run<B: Backend>(
-        &mut self,
-        terminal: &mut Terminal<B>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         self.load_state()?;
 
         loop {
@@ -74,9 +73,7 @@ impl App {
     }
 
     fn render<B: Backend>(&mut self, terminal: &mut Terminal<B>) {
-        terminal
-            .draw(|f| ui(f, self))
-            .expect("Failed to draw to terminal");
+        terminal.draw(|f| ui(f, self)).expect("Failed to draw to terminal");
     }
 
     fn update(&mut self) -> Option<Message> {
@@ -92,17 +89,17 @@ impl App {
                     KeyCode::Char('j') | KeyCode::Down => self.library_state.select_next(),
                     KeyCode::Char('k') | KeyCode::Up => self.library_state.select_previous(),
                     KeyCode::Char('r') | KeyCode::Char('a') => {
-                        self.prev_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
+                        self.library_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
                         self.library_state.select(None);
                         self.current_screen = CurrentScreen::Registration;
                         self.current_field = Some(CurrentField::Title);
                     },
                     KeyCode::Char('e') => {
-                        self.prev_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
+                        self.library_index = self.library_state.selected().unwrap(); // Should never be `None` in `CurrentScreen::Library`
                         self.current_screen = CurrentScreen::Edit;
                         self.current_field = Some(CurrentField::Title);
 
-                        let book = self.library.get(self.prev_index).unwrap();
+                        let book = self.library.get(self.library_index).unwrap();
 
                         self.editor_form.title = Input::new(book.title.clone());
                         self.editor_form.author = Input::new(book.author.clone());
@@ -120,7 +117,7 @@ impl App {
                             self.editor_form.year.reset();
                         }
 
-                        self.library_state.select(Some(self.prev_index));
+                        self.library_state.select(Some(self.library_index));
 
                         self.current_screen = CurrentScreen::Library;
                         self.current_field = None;
@@ -142,24 +139,16 @@ impl App {
                         self.current_field = None;
                     },
                     KeyCode::Tab | KeyCode::Down => match self.current_field {
-                        Some(CurrentField::Title) => {
-                            self.current_field = Some(CurrentField::Author)
-                        },
-                        Some(CurrentField::Author) => {
-                            self.current_field = Some(CurrentField::Genre)
-                        },
+                        Some(CurrentField::Title) => self.current_field = Some(CurrentField::Author),
+                        Some(CurrentField::Author) => self.current_field = Some(CurrentField::Genre),
                         Some(CurrentField::Genre) => self.current_field = Some(CurrentField::Year),
                         Some(CurrentField::Year) => self.current_field = Some(CurrentField::Title),
                         _ => {},
                     },
                     KeyCode::BackTab | KeyCode::Up => match self.current_field {
                         Some(CurrentField::Title) => self.current_field = Some(CurrentField::Year),
-                        Some(CurrentField::Author) => {
-                            self.current_field = Some(CurrentField::Title)
-                        },
-                        Some(CurrentField::Genre) => {
-                            self.current_field = Some(CurrentField::Author)
-                        },
+                        Some(CurrentField::Author) => self.current_field = Some(CurrentField::Title),
+                        Some(CurrentField::Genre) => self.current_field = Some(CurrentField::Author),
                         Some(CurrentField::Year) => self.current_field = Some(CurrentField::Genre),
                         _ => {},
                     },
@@ -210,7 +199,7 @@ impl App {
         let genre = self.editor_form.genre.value();
         let publication = self.editor_form.year.value();
 
-        match self.library.get_mut(self.prev_index) {
+        match self.library.get_mut(self.library_index) {
             Some(book) => {
                 book.title = title.to_string();
                 book.author = author.to_string();
@@ -221,7 +210,7 @@ impl App {
         };
     }
 
-    fn load_state(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn load_state(&mut self) -> Result<()> {
         // TODO: replace with actual loading logic
         self.library.push(
             Book::builder()
@@ -229,7 +218,8 @@ impl App {
                 .author("F. Scott Fitzgerald")
                 .genre("Fiction")
                 .year(1925)
-                .build()?,
+                .build()
+                .unwrap(),
         );
         self.library.push(
             Book::builder()
@@ -237,7 +227,8 @@ impl App {
                 .author("Harper Lee")
                 .genre("Dystopian, Fiction")
                 .year(1960)
-                .build()?,
+                .build()
+                .unwrap(),
         );
         self.library.push(
             Book::builder()
@@ -245,7 +236,8 @@ impl App {
                 .author("Steve Klabnik, Carol Nichols")
                 .genre("Programming")
                 .year(2018)
-                .build()?,
+                .build()
+                .unwrap(),
         );
 
         let _ = self.library[2].check_out();
@@ -255,7 +247,7 @@ impl App {
         Ok(())
     }
 
-    fn save_state(&self) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_state(&self) -> Result<()> {
         Ok(())
     }
 }

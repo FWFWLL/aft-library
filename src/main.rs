@@ -2,17 +2,17 @@ mod app;
 mod book;
 mod ui;
 
+use anyhow::Result;
+
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use ratatui::crossterm::execute;
-use ratatui::crossterm::terminal::{
-    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
-};
+use ratatui::crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode};
 
 use crate::app::App;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     // Terminal initialization
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
@@ -22,21 +22,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Application
     let mut app = App::new();
-    let result = app.run(&mut terminal);
-    
+    app.run(&mut terminal)?;
+
     // Cleanup
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     terminal.show_cursor()?;
 
-    match result {
-        Ok(_) => println!("Library state saved succesfully."),
-        Err(_) => eprintln!("Failed to save library."),
-    }
-
-    result
+    Ok(())
 }

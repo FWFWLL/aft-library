@@ -12,6 +12,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         Constraint::Percentage(60),
         Constraint::Percentage(40),
     ]));
+
     let [lib_area, nav_area] = left_area.layout(&Layout::vertical([
         Constraint::Fill(1),
         Constraint::Length(3),
@@ -30,26 +31,15 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             render_search_bar(frame, search_area);
             render_book_details(frame, details_area, &app.library, &app.library_state);
         },
-        CurrentScreen::Registration => {
-            render_book_editor_form(frame, right_area, app);
-        },
-        CurrentScreen::Edit => {
+        CurrentScreen::Registration | CurrentScreen::Edit => {
             render_book_editor_form(frame, right_area, app);
         },
         _ => {},
     }
 }
 
-fn render_library(
-    frame: &mut Frame,
-    area: Rect,
-    library: &Vec<Book>,
-    library_state: &mut ListState,
-) {
-    let book_titles = library
-        .iter()
-        .map(|book| book.title.as_str())
-        .collect::<Vec<_>>();
+fn render_library(frame: &mut Frame, area: Rect, library: &Vec<Book>, library_state: &mut ListState) {
+    let book_titles = library.iter().map(|book| book.title.as_str()).collect::<Vec<_>>();
 
     let library = List::new(book_titles)
         .highlight_style(Modifier::REVERSED)
@@ -59,9 +49,7 @@ fn render_library(
 }
 
 fn render_nav(frame: &mut Frame, area: Rect) {
-    let nav_block = Block::bordered()
-        .padding(Padding::horizontal(1))
-        .style(Style::default());
+    let nav_block = Block::bordered().padding(Padding::horizontal(1)).style(Style::default());
 
     let nav_text = vec![
         Span::styled("R", Style::default().add_modifier(Modifier::UNDERLINED)),
@@ -79,43 +67,27 @@ fn render_nav(frame: &mut Frame, area: Rect) {
 }
 
 fn render_search_bar(frame: &mut Frame, area: Rect) {
-    let search_block = Block::bordered()
-        .padding(Padding::horizontal(1))
-        .style(Style::default());
+    let search_block = Block::bordered().padding(Padding::horizontal(1)).style(Style::default());
 
-    let search_bar = Paragraph::new(Span::styled("Search", Style::default().fg(Color::DarkGray)))
-        .block(search_block);
+    let search_bar = Paragraph::new(Span::styled("Search", Style::default().fg(Color::DarkGray))).block(search_block);
 
     frame.render_widget(search_bar, area);
 }
 
-fn render_book_details(
-    frame: &mut Frame,
-    area: Rect,
-    library: &Vec<Book>,
-    library_state: &ListState,
-) {
+fn render_book_details(frame: &mut Frame, area: Rect, library: &Vec<Book>, library_state: &ListState) {
     let mut book_details = Vec::default();
     if let Some(library_index) = library_state.selected() {
         if let Some(book) = library.get(library_index) {
-            book_details.push(Line::from(Span::styled(
-                book.title.as_str(),
-                Style::default().bold(),
-            )));
+            book_details.push(Line::from(Span::styled(book.title.as_str(), Style::default().bold())));
             book_details.push(Line::from(format!("Author: {}", book.author)));
             book_details.push(Line::from(format!("Genre: {}", book.genre)));
             book_details.push(Line::from(format!("Published in {}", book.year)));
 
             let mut book_status = vec![Span::raw("Status: ")];
             match book.status {
-                Status::Available => {
-                    book_status.push(Span::styled("Available", Style::default().fg(Color::Green)))
-                },
+                Status::Available => book_status.push(Span::styled("Available", Style::default().fg(Color::Green))),
                 Status::CheckedOut(date_time) => {
-                    book_status.push(Span::styled(
-                        "Checked out ",
-                        Style::default().fg(Color::Red),
-                    ));
+                    book_status.push(Span::styled("Checked out ", Style::default().fg(Color::Red)));
                     book_status.push(Span::styled(
                         date_time.format("%Y/%m/%d %T").to_string(),
                         Style::default().fg(Color::Red),
