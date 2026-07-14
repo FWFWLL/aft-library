@@ -213,7 +213,7 @@ impl App {
     }
 
     fn load_state(&mut self) -> Result<()> {
-        let file = File::open("state.json")?;
+        let file = File::open("library.json")?;
         let reader = BufReader::new(file);
 
         self.library = serde_json::from_reader(reader)?;
@@ -223,7 +223,7 @@ impl App {
     }
 
     fn save_state(&self) -> Result<()> {
-        let file = File::create("state.json")?;
+        let file = File::create("library.json")?;
         let mut writer = BufWriter::new(file);
 
         serde_json::to_writer(&mut writer, &self.library)?;
