@@ -1,3 +1,6 @@
+use anyhow::Result;
+use anyhow::anyhow;
+
 use chrono::DateTime;
 use chrono::Utc;
 
@@ -15,8 +18,8 @@ pub enum Status {
 pub struct Book {
     pub title: String,
     pub author: String,
-    pub genre: String, // Books can have multiple genres
-    pub year: u32,     // Year of publication
+    pub genre: String,
+    pub year: u32,
     pub status: Status,
 }
 
@@ -36,14 +39,14 @@ impl Book {
         BookBuilder::new()
     }
 
-    pub fn check_out(&mut self) -> Result<DateTime<Utc>, &'static str> {
+    pub fn check_out(&mut self) -> Result<DateTime<Utc>> {
         match self.status {
             Status::Available => {
                 let now = chrono::Utc::now();
                 self.status = Status::CheckedOut(now);
                 Ok(now)
             },
-            Status::CheckedOut(_) => Err("Book is already checked out"),
+            Status::CheckedOut(_) => Err(anyhow!("Book is already checked out")),
         }
     }
 }
@@ -54,7 +57,7 @@ pub struct BookBuilder {
     title: Option<String>,
     author: Option<String>,
     genre: Option<String>,
-    publication: Option<u32>,
+    year: Option<u32>,
 }
 
 impl BookBuilder {
@@ -78,32 +81,17 @@ impl BookBuilder {
     }
 
     pub fn year(mut self, publication: u32) -> Self {
-        self.publication = Some(publication);
+        self.year = Some(publication);
         self
     }
 
-    pub fn build(self) -> Result<Book, &'static str> {
-        let title = match self.title {
-            Some(title) => title,
-            None => return Err("Missing title"),
-        };
-
-        let author = match self.author {
-            Some(author) => author,
-            None => return Err("Missing author"),
-        };
-
-        let genre = match self.genre {
-            Some(genre) => genre,
-            None => return Err("Missing genre"),
-        };
-
-        let publication = match self.publication {
-            Some(publication) => publication,
-            None => return Err("Missing publication year"),
-        };
-
-        Ok(Book::new(title, author, genre, publication))
+    pub fn build(self) -> Book {
+        Book::new(
+            self.title.unwrap_or_default(),
+            self.author.unwrap_or_default(),
+            self.genre.unwrap_or_default(),
+            self.year.unwrap_or_default(),
+        )
     }
 }
 
@@ -158,25 +146,10 @@ mod test_book_builder {
             .year(2018)
             .build();
 
-        assert_eq!(book.is_ok(), true);
-
-        let book = book.unwrap();
-
         assert_eq!(book.title, "The Rust Programming Language");
         assert_eq!(book.author, "Steve Klabnik, Carol Nichols");
         assert_eq!(book.genre, "Programming");
         assert_eq!(book.year, 2018);
         assert_eq!(book.status, Status::Available);
-    }
-
-    #[test]
-    fn test_book_builder_error() {
-        let book = BookBuilder::new()
-            .author("Steve Klabnik, Carol Nichols")
-            .genre("Programming")
-            .year(2018)
-            .build();
-
-        assert_eq!(book.is_err(), true);
     }
 }

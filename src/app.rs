@@ -190,8 +190,7 @@ impl App {
             .author(author)
             .genre(genre)
             .year(year.parse().unwrap_or_default())
-            .build()
-            .unwrap();
+            .build();
 
         self.library.push(book);
     }
