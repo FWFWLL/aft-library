@@ -89,7 +89,3 @@ src/
 ├── book.rs      # Book data structures and builder pattern
 └── ui.rs        # UI rendering and layout
 ```
-
-## License
-
-[Add your license information here]
